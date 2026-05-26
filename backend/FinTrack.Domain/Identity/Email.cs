@@ -1,0 +1,38 @@
+using System.Text.RegularExpressions;
+using FinTrack.Domain.Common;
+
+namespace FinTrack.Domain.Identity;
+
+public sealed partial class Email : ValueObject
+{
+    public string Value { get; }
+
+    private Email(string value) => Value = value;
+
+    public static Email Create(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            throw new DomainException("Email is required.");
+        }
+
+        var normalized = value.Trim().ToLowerInvariant();
+
+        if (!EmailRegex().IsMatch(normalized))
+        {
+            throw new DomainException($"Invalid email format: '{value}'.");
+        }
+
+        return new Email(normalized);
+    }
+
+    protected override IEnumerable<object?> GetEqualityComponents()
+    {
+        yield return Value;
+    }
+
+    public override string ToString() => Value;
+
+    [GeneratedRegex(@"^[^@\s]+@[^@\s]+\.[^@\s]+$")]
+    private static partial Regex EmailRegex();
+}
