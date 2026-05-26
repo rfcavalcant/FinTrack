@@ -1,0 +1,44 @@
+# DESENVOLVIMENTO — carregado automaticamente por "docker compose up".
+# Hot reload via dotnet watch, código montado por volume, porta do banco exposta.
+
+services:
+  db:
+    # Em dev expomos a porta para quem quiser rodar a API localmente (fora do Docker).
+    ports:
+      - "5432:5432"
+
+  api:
+    build:
+      target: dev
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+    volumes:
+      # Código-fonte montado para hot reload.
+      - ./backend:/src
+      # Cache de pacotes NuGet entre execuções.
+      - fintrack-nuget:/root/.nuget/packages
+      # Volumes anônimos isolam os build outputs do container dos artefatos do host
+      # (host é Windows, container é Linux — não podem se misturar).
+      - /src/FinTrack.API/bin
+      - /src/FinTrack.API/obj
+      - /src/FinTrack.Application/bin
+      - /src/FinTrack.Application/obj
+      - /src/FinTrack.Domain/bin
+      - /src/FinTrack.Domain/obj
+      - /src/FinTrack.Infrastructure/bin
+      - /src/FinTrack.Infrastructure/obj
+    ports:
+      - "5045:8080"
+
+  # web:
+  #   build:
+  #     target: dev          # estágio de dev do frontend/Dockerfile (ng serve)
+  #   command: npm start -- --host 0.0.0.0
+  #   volumes:
+  #     - ./frontend/fintrack-web:/app
+  #     - /app/node_modules
+  #   ports:
+  #     - "4200:4200"
+
+volumes:
+  fintrack-nuget:

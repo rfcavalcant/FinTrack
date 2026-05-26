@@ -1,0 +1,15 @@
+# Build outputs
+**/bin/
+**/obj/
+
+# IDE / ferramentas
+**/.vs/
+**/.idea/
+**/*.user
+
+# Segredos / config local (não vai para a imagem)
+**/appsettings.Development.json
+
+# Docker
+**/Dockerfile*
+**/.dockerignore

@@ -1,0 +1,23 @@
+# PRODUÇÃO — uso explícito:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d
+# Imagem runtime enxuta (sem SDK), sem volumes de código, banco não exposto.
+
+services:
+  api:
+    build:
+      target: final
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+  # db: sem "ports" aqui de propósito — o banco não fica exposto ao host em prod;
+  #     só a API o acessa pela rede interna fintrack-net.
+
+  # web:
+  #   build:
+  #     target: prod         # estágio nginx do frontend/Dockerfile
+  #   ports:
+  #     - "80:80"
+  #   restart: unless-stopped

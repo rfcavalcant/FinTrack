@@ -1,0 +1,66 @@
+# Base compartilhada entre dev e prod.
+# Dev:  docker compose up --build                (carrega docker-compose.override.yml automaticamente)
+# Prod: docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d
+#
+# Variáveis vêm de .env (veja .env.example). Nada de segredo hardcoded aqui.
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - fintrack-net
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      # Em container, a API fala com o Postgres pelo nome do serviço "db" (não localhost).
+      ConnectionStrings__FinTrackDb: "Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
+      # JWT (segredo vem do .env, não versionado).
+      Jwt__Key: ${JWT_KEY}
+      Jwt__Issuer: ${JWT_ISSUER:-FinTrack}
+      Jwt__Audience: ${JWT_AUDIENCE:-FinTrack}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - fintrack-net
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # web (Angular) — PREPARADO para a fase 9, ainda INATIVO.
+  # O projeto Angular ainda não existe (frontend/fintrack-web). Quando existir:
+  #   1. Descomente este bloco aqui e o complemento em override/prod.
+  #   2. O Dockerfile de referência já está em frontend/Dockerfile.
+  #
+  # web:
+  #   build:
+  #     context: ./frontend/fintrack-web
+  #     dockerfile: ../../frontend/Dockerfile   # ou mova o Dockerfile para dentro do projeto
+  #   depends_on:
+  #     - api
+  #   networks:
+  #     - fintrack-net
+  #   restart: unless-stopped
+  # ---------------------------------------------------------------------------
+
+volumes:
+  pgdata:
+
+networks:
+  fintrack-net:
+    driver: bridge
