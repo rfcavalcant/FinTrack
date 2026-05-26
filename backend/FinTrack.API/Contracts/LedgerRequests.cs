@@ -24,3 +24,10 @@ public sealed record RegisterTransactionRequest(
     decimal Amount,
     DateOnly Date,
     string? Description);
+
+public sealed record DefineBudgetRequest(
+    Guid CategoryId,
+    int Year,
+    int Month,
+    decimal LimitAmount,
+    string? Currency);
