@@ -21,8 +21,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.4" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\FinTrack.Application\FinTrack.Application.csproj" />
     <ProjectReference Include="..\FinTrack.Domain\FinTrack.Domain.csproj" />
+    <ProjectReference Include="..\FinTrack.Infrastructure\FinTrack.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>
