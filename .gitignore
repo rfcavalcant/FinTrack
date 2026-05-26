@@ -1,0 +1,15 @@
+bin/
+obj/
+/packages/
+riderModule.iml
+/_ReSharper.Caches/
+
+# Configuração local / segredos (connection strings, etc.)
+appsettings.Development.json
+
+# Variáveis de ambiente do Docker (segredos). Mantém só o template.
+.env
+.env.*
+!.env.example
+.idea/
+
