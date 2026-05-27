@@ -1,0 +1,19 @@
+<div class="dashboard">
+  <header class="dashboard-header">
+    <span class="brand">FinTrack</span>
+    <div class="user-info">
+      <span>{{ auth.currentUser()?.name }}</span>
+      <button class="btn-logout" (click)="auth.logout()">Sair</button>
+    </div>
+  </header>
+
+  <main class="dashboard-main">
+    <h1>Olá, {{ auth.currentUser()?.name }} 👋</h1>
+    <p class="subtitle">Seu dashboard financeiro será construído aqui nas próximas fases.</p>
+
+    <div class="placeholder-card">
+      <span class="placeholder-icon">📊</span>
+      <p>Gráficos e resumos em breve (fase 10).</p>
+    </div>
+  </main>
+</div>

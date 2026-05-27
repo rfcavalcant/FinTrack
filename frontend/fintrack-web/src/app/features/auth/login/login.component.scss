@@ -1,0 +1,5 @@
+@use '../auth-shared' as auth;
+
+:host {
+  @include auth.host-layout;
+}
