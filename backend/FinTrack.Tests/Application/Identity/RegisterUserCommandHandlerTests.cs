@@ -20,13 +20,13 @@ public class RegisterUserCommandHandlerTests
         => new(_users, _passwordHasher, _jwtTokenGenerator, _unitOfWork);
 
     [Fact]
-    public async Task Handle_ComEmailNovo_FazHashCriaUsuarioEPersiste()
+    public async Task HandleAsync_ComEmailNovo_FazHashCriaUsuarioEPersiste()
     {
         _users.ExistsByEmailAsync(Arg.Any<Email>(), Arg.Any<CancellationToken>()).Returns(false);
         _passwordHasher.Hash(Command.Password).Returns("HASHED");
         _jwtTokenGenerator.GenerateToken(Arg.Any<User>()).Returns("TOKEN");
 
-        var result = await CreateHandler().Handle(Command, CancellationToken.None);
+        var result = await CreateHandler().HandleAsync(Command, CancellationToken.None);
 
         result.Token.Should().Be("TOKEN");
         result.Email.Should().Be("rafael@fintrack.com");
@@ -36,11 +36,11 @@ public class RegisterUserCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_ComEmailJaCadastrado_LancaDuplicateEmailExceptionENaoPersiste()
+    public async Task HandleAsync_ComEmailJaCadastrado_LancaDuplicateEmailExceptionENaoPersiste()
     {
         _users.ExistsByEmailAsync(Arg.Any<Email>(), Arg.Any<CancellationToken>()).Returns(true);
 
-        var act = () => CreateHandler().Handle(Command, CancellationToken.None);
+        var act = () => CreateHandler().HandleAsync(Command, CancellationToken.None);
 
         await act.Should().ThrowAsync<DuplicateEmailException>();
         _users.DidNotReceive().Add(Arg.Any<User>());

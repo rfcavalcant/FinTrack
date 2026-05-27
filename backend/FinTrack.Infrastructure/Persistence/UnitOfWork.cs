@@ -1,19 +1,17 @@
-using FinTrack.Application.Common;
 using FinTrack.Application.Common.Interfaces;
 using FinTrack.Domain.Common;
-using MediatR;
 
 namespace FinTrack.Infrastructure.Persistence;
 
 public sealed class UnitOfWork : IUnitOfWork
 {
     private readonly FinTrackDbContext _dbContext;
-    private readonly IPublisher _publisher;
+    private readonly IDomainEventDispatcher _dispatcher;
 
-    public UnitOfWork(FinTrackDbContext dbContext, IPublisher publisher)
+    public UnitOfWork(FinTrackDbContext dbContext, IDomainEventDispatcher dispatcher)
     {
         _dbContext = dbContext;
-        _publisher = publisher;
+        _dispatcher = dispatcher;
     }
 
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
@@ -32,13 +30,7 @@ public sealed class UnitOfWork : IUnitOfWork
             entry.Entity.ClearDomainEvents();
 
         foreach (var domainEvent in domainEvents)
-        {
-            var notificationType = typeof(DomainEventNotification<>)
-                .MakeGenericType(domainEvent.GetType());
-
-            var notification = Activator.CreateInstance(notificationType, domainEvent)!;
-            await _publisher.Publish(notification, cancellationToken);
-        }
+            await _dispatcher.DispatchAsync(domainEvent, cancellationToken);
 
         return result;
     }

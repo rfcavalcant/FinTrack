@@ -1,12 +1,12 @@
+using FinTrack.Application.Common;
 using FinTrack.Application.Common.Interfaces;
 using FinTrack.Domain.Budgeting;
-using MediatR;
 
 namespace FinTrack.Application.Budgeting;
 
-public sealed record GetBudgetsQuery(int? Year, int? Month) : IRequest<IReadOnlyList<BudgetResponse>>;
+public sealed record GetBudgetsQuery(int? Year, int? Month);
 
-public sealed class GetBudgetsQueryHandler : IRequestHandler<GetBudgetsQuery, IReadOnlyList<BudgetResponse>>
+public sealed class GetBudgetsQueryHandler : IQueryHandler<GetBudgetsQuery, IReadOnlyList<BudgetResponse>>
 {
     private readonly IBudgetRepository _budgets;
     private readonly ICurrentUserService _currentUser;
@@ -17,16 +17,17 @@ public sealed class GetBudgetsQueryHandler : IRequestHandler<GetBudgetsQuery, IR
         _currentUser = currentUser;
     }
 
-    public async Task<IReadOnlyList<BudgetResponse>> Handle(
-        GetBudgetsQuery request, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<BudgetResponse>> HandleAsync(
+        GetBudgetsQuery query,
+        CancellationToken cancellationToken = default)
     {
         var budgets = await _budgets.GetByUserAsync(_currentUser.UserId, cancellationToken);
 
-        if (request.Year.HasValue && request.Month.HasValue)
+        if (query.Year.HasValue && query.Month.HasValue)
         {
             budgets = budgets
-                .Where(b => b.Period.Start.Year == request.Year.Value
-                         && b.Period.Start.Month == request.Month.Value)
+                .Where(b => b.Period.Start.Year == query.Year.Value
+                         && b.Period.Start.Month == query.Month.Value)
                 .ToList();
         }
 

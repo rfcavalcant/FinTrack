@@ -1,12 +1,12 @@
+using FinTrack.Application.Common;
 using FinTrack.Application.Common.Exceptions;
 using FinTrack.Application.Common.Interfaces;
 using FinTrack.Domain.Accounts;
 using FluentValidation;
-using MediatR;
 
 namespace FinTrack.Application.Accounts;
 
-public sealed record RenameAccountCommand(Guid Id, string Name) : IRequest<AccountResponse>;
+public sealed record RenameAccountCommand(Guid Id, string Name);
 
 public sealed class RenameAccountCommandValidator : AbstractValidator<RenameAccountCommand>
 {
@@ -16,7 +16,7 @@ public sealed class RenameAccountCommandValidator : AbstractValidator<RenameAcco
     }
 }
 
-public sealed class RenameAccountCommandHandler : IRequestHandler<RenameAccountCommand, AccountResponse>
+public sealed class RenameAccountCommandHandler : ICommandHandler<RenameAccountCommand, AccountResponse>
 {
     private readonly IAccountRepository _accounts;
     private readonly IUnitOfWork _unitOfWork;
@@ -32,15 +32,15 @@ public sealed class RenameAccountCommandHandler : IRequestHandler<RenameAccountC
         _currentUser = currentUser;
     }
 
-    public async Task<AccountResponse> Handle(RenameAccountCommand request, CancellationToken cancellationToken)
+    public async Task<AccountResponse> HandleAsync(
+        RenameAccountCommand command,
+        CancellationToken cancellationToken = default)
     {
-        var account = await _accounts.GetByIdAsync(request.Id, cancellationToken);
+        var account = await _accounts.GetByIdAsync(command.Id, cancellationToken);
         if (account is null || account.UserId != _currentUser.UserId)
-        {
             throw new NotFoundException("Account not found.");
-        }
 
-        account.Rename(request.Name);
+        account.Rename(command.Name);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return AccountResponse.From(account);

@@ -1,3 +1,4 @@
+using FinTrack.Application.Common;
 using FinTrack.Application.Common.Exceptions;
 using FinTrack.Application.Common.Interfaces;
 using FinTrack.Domain.Accounts;
@@ -5,7 +6,6 @@ using FinTrack.Domain.Categories;
 using FinTrack.Domain.Common;
 using FinTrack.Domain.Transactions;
 using FluentValidation;
-using MediatR;
 
 namespace FinTrack.Application.Transactions;
 
@@ -15,7 +15,7 @@ public sealed record RegisterTransactionCommand(
     TransactionType Type,
     decimal Amount,
     DateOnly Date,
-    string? Description) : IRequest<TransactionResponse>;
+    string? Description);
 
 public sealed class RegisterTransactionCommandValidator : AbstractValidator<RegisterTransactionCommand>
 {
@@ -30,7 +30,7 @@ public sealed class RegisterTransactionCommandValidator : AbstractValidator<Regi
 }
 
 public sealed class RegisterTransactionCommandHandler
-    : IRequestHandler<RegisterTransactionCommand, TransactionResponse>
+    : ICommandHandler<RegisterTransactionCommand, TransactionResponse>
 {
     private readonly IAccountRepository _accounts;
     private readonly ICategoryRepository _categories;
@@ -52,48 +52,38 @@ public sealed class RegisterTransactionCommandHandler
         _currentUser = currentUser;
     }
 
-    public async Task<TransactionResponse> Handle(
-        RegisterTransactionCommand request,
-        CancellationToken cancellationToken)
+    public async Task<TransactionResponse> HandleAsync(
+        RegisterTransactionCommand command,
+        CancellationToken cancellationToken = default)
     {
         var userId = _currentUser.UserId;
 
-        var account = await _accounts.GetByIdAsync(request.AccountId, cancellationToken);
+        var account = await _accounts.GetByIdAsync(command.AccountId, cancellationToken);
         if (account is null || account.UserId != userId)
-        {
             throw new NotFoundException("Account not found.");
-        }
 
-        var category = await _categories.GetByIdAsync(request.CategoryId, cancellationToken);
+        var category = await _categories.GetByIdAsync(command.CategoryId, cancellationToken);
         if (category is null || category.UserId != userId)
-        {
             throw new NotFoundException("Category not found.");
-        }
 
-        var expectedCategoryType = request.Type == TransactionType.Income
+        var expectedCategoryType = command.Type == TransactionType.Income
             ? CategoryType.Income
             : CategoryType.Expense;
         if (category.Type != expectedCategoryType)
-        {
             throw new DomainException("Category type does not match the transaction type.");
-        }
 
         // Lançamento na moeda da conta — garante que Credit/Debit não rejeitem por moeda divergente.
-        var amount = Money.Of(request.Amount, account.Balance.Currency);
+        var amount = Money.Of(command.Amount, account.Balance.Currency);
 
-        var transaction = request.Type == TransactionType.Income
-            ? Transaction.RegisterIncome(userId, account.Id, category.Id, amount, request.Date, request.Description)
-            : Transaction.RegisterExpense(userId, account.Id, category.Id, amount, request.Date, request.Description);
+        var transaction = command.Type == TransactionType.Income
+            ? Transaction.RegisterIncome(userId, account.Id, category.Id, amount, command.Date, command.Description)
+            : Transaction.RegisterExpense(userId, account.Id, category.Id, amount, command.Date, command.Description);
 
         // Atualização de saldo via domínio, na mesma unidade de trabalho (consistência forte).
-        if (request.Type == TransactionType.Income)
-        {
+        if (command.Type == TransactionType.Income)
             account.Credit(amount);
-        }
         else
-        {
             account.Debit(amount);
-        }
 
         _transactions.Add(transaction);
         await _unitOfWork.SaveChangesAsync(cancellationToken);

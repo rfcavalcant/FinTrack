@@ -1,14 +1,14 @@
+using FinTrack.Application.Common;
 using FinTrack.Application.Common.Exceptions;
 using FinTrack.Application.Common.Interfaces;
 using FinTrack.Domain.Accounts;
 using FinTrack.Domain.Transactions;
-using MediatR;
 
 namespace FinTrack.Application.Transactions;
 
-public sealed record DeleteTransactionCommand(Guid Id) : IRequest;
+public sealed record DeleteTransactionCommand(Guid Id);
 
-public sealed class DeleteTransactionCommandHandler : IRequestHandler<DeleteTransactionCommand>
+public sealed class DeleteTransactionCommandHandler : ICommandHandler<DeleteTransactionCommand>
 {
     private readonly ITransactionRepository _transactions;
     private readonly IAccountRepository _accounts;
@@ -27,26 +27,22 @@ public sealed class DeleteTransactionCommandHandler : IRequestHandler<DeleteTran
         _currentUser = currentUser;
     }
 
-    public async Task Handle(DeleteTransactionCommand request, CancellationToken cancellationToken)
+    public async Task HandleAsync(
+        DeleteTransactionCommand command,
+        CancellationToken cancellationToken = default)
     {
-        var transaction = await _transactions.GetByIdAsync(request.Id, cancellationToken);
+        var transaction = await _transactions.GetByIdAsync(command.Id, cancellationToken);
         if (transaction is null || transaction.UserId != _currentUser.UserId)
-        {
             throw new NotFoundException("Transaction not found.");
-        }
 
         // Estorna o efeito no saldo da conta (mesma unidade de trabalho).
         var account = await _accounts.GetByIdAsync(transaction.AccountId, cancellationToken);
         if (account is not null)
         {
             if (transaction.Type == TransactionType.Income)
-            {
                 account.ReverseCredit(transaction.Amount);
-            }
             else
-            {
                 account.ReverseDebit(transaction.Amount);
-            }
         }
 
         _transactions.Remove(transaction);

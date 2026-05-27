@@ -19,38 +19,38 @@ public class LoginQueryHandlerTests
         => User.Register("Rafael", Email.Create("rafael@fintrack.com"), "HASHED");
 
     [Fact]
-    public async Task Handle_ComCredenciaisValidas_RetornaToken()
+    public async Task HandleAsync_ComCredenciaisValidas_RetornaToken()
     {
         var user = ExistingUser();
         _users.GetByEmailAsync(Arg.Any<Email>(), Arg.Any<CancellationToken>()).Returns(user);
         _passwordHasher.Verify("senhaForte123", "HASHED").Returns(true);
         _jwtTokenGenerator.GenerateToken(user).Returns("TOKEN");
 
-        var result = await CreateHandler().Handle(
+        var result = await CreateHandler().HandleAsync(
             new LoginQuery("rafael@fintrack.com", "senhaForte123"), CancellationToken.None);
 
         result.Token.Should().Be("TOKEN");
     }
 
     [Fact]
-    public async Task Handle_ComEmailInexistente_LancaInvalidCredentials()
+    public async Task HandleAsync_ComEmailInexistente_LancaInvalidCredentials()
     {
         _users.GetByEmailAsync(Arg.Any<Email>(), Arg.Any<CancellationToken>()).Returns((User?)null);
 
-        var act = () => CreateHandler().Handle(
+        var act = () => CreateHandler().HandleAsync(
             new LoginQuery("nao@existe.com", "qualquer"), CancellationToken.None);
 
         await act.Should().ThrowAsync<InvalidCredentialsException>();
     }
 
     [Fact]
-    public async Task Handle_ComSenhaIncorreta_LancaInvalidCredentials()
+    public async Task HandleAsync_ComSenhaIncorreta_LancaInvalidCredentials()
     {
         var user = ExistingUser();
         _users.GetByEmailAsync(Arg.Any<Email>(), Arg.Any<CancellationToken>()).Returns(user);
         _passwordHasher.Verify(Arg.Any<string>(), Arg.Any<string>()).Returns(false);
 
-        var act = () => CreateHandler().Handle(
+        var act = () => CreateHandler().HandleAsync(
             new LoginQuery("rafael@fintrack.com", "senhaErrada"), CancellationToken.None);
 
         await act.Should().ThrowAsync<InvalidCredentialsException>();

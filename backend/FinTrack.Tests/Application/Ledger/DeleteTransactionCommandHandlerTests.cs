@@ -22,7 +22,7 @@ public class DeleteTransactionCommandHandlerTests
         => new(_transactions, _accounts, _unitOfWork, _currentUser);
 
     [Fact]
-    public async Task Handle_ExcluiDespesa_EstornaCreditandoDeVolta()
+    public async Task HandleAsync_ExcluiDespesa_EstornaCreditandoDeVolta()
     {
         // Saldo 700 = 1000 inicial - 300 de uma despesa que será excluída.
         var account = Account.Open(_userId, "Corrente", AccountType.Checking, Money.Of(700m));
@@ -31,7 +31,7 @@ public class DeleteTransactionCommandHandlerTests
         _transactions.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns(transaction);
         _accounts.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns(account);
 
-        await CreateHandler().Handle(new DeleteTransactionCommand(transaction.Id), CancellationToken.None);
+        await CreateHandler().HandleAsync(new DeleteTransactionCommand(transaction.Id), CancellationToken.None);
 
         account.Balance.Should().Be(Money.Of(1000m));
         _transactions.Received(1).Remove(transaction);
@@ -39,7 +39,7 @@ public class DeleteTransactionCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_ExcluiReceita_EstornaDebitandoDeVolta()
+    public async Task HandleAsync_ExcluiReceita_EstornaDebitandoDeVolta()
     {
         // Saldo 1250 = 1000 inicial + 250 de uma receita que será excluída.
         var account = Account.Open(_userId, "Corrente", AccountType.Checking, Money.Of(1250m));
@@ -48,7 +48,7 @@ public class DeleteTransactionCommandHandlerTests
         _transactions.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns(transaction);
         _accounts.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns(account);
 
-        await CreateHandler().Handle(new DeleteTransactionCommand(transaction.Id), CancellationToken.None);
+        await CreateHandler().HandleAsync(new DeleteTransactionCommand(transaction.Id), CancellationToken.None);
 
         account.Balance.Should().Be(Money.Of(1000m));
     }

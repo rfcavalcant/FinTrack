@@ -1,13 +1,12 @@
+using FinTrack.Application.Common;
 using FinTrack.Application.Common.Interfaces;
 using FinTrack.Domain.Accounts;
-using MediatR;
 
 namespace FinTrack.Application.Accounts;
 
-public sealed record GetAccountsQuery : IRequest<IReadOnlyList<AccountResponse>>;
+public sealed record GetAccountsQuery;
 
-public sealed class GetAccountsQueryHandler
-    : IRequestHandler<GetAccountsQuery, IReadOnlyList<AccountResponse>>
+public sealed class GetAccountsQueryHandler : IQueryHandler<GetAccountsQuery, IReadOnlyList<AccountResponse>>
 {
     private readonly IAccountRepository _accounts;
     private readonly ICurrentUserService _currentUser;
@@ -18,9 +17,9 @@ public sealed class GetAccountsQueryHandler
         _currentUser = currentUser;
     }
 
-    public async Task<IReadOnlyList<AccountResponse>> Handle(
-        GetAccountsQuery request,
-        CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<AccountResponse>> HandleAsync(
+        GetAccountsQuery query,
+        CancellationToken cancellationToken = default)
     {
         var accounts = await _accounts.GetByUserAsync(_currentUser.UserId, cancellationToken);
         return accounts.Select(AccountResponse.From).ToList();

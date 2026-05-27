@@ -1,15 +1,15 @@
+using FinTrack.Application.Common;
 using FinTrack.Application.Common.Exceptions;
 using FinTrack.Application.Common.Interfaces;
 using FinTrack.Domain.Accounts;
 using FinTrack.Domain.Common;
 using FinTrack.Domain.Transactions;
-using MediatR;
 
 namespace FinTrack.Application.Accounts;
 
-public sealed record DeleteAccountCommand(Guid Id) : IRequest;
+public sealed record DeleteAccountCommand(Guid Id);
 
-public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountCommand>
+public sealed class DeleteAccountCommandHandler : ICommandHandler<DeleteAccountCommand>
 {
     private readonly IAccountRepository _accounts;
     private readonly ITransactionRepository _transactions;
@@ -28,18 +28,16 @@ public sealed class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountC
         _currentUser = currentUser;
     }
 
-    public async Task Handle(DeleteAccountCommand request, CancellationToken cancellationToken)
+    public async Task HandleAsync(
+        DeleteAccountCommand command,
+        CancellationToken cancellationToken = default)
     {
-        var account = await _accounts.GetByIdAsync(request.Id, cancellationToken);
+        var account = await _accounts.GetByIdAsync(command.Id, cancellationToken);
         if (account is null || account.UserId != _currentUser.UserId)
-        {
             throw new NotFoundException("Account not found.");
-        }
 
         if (await _transactions.ExistsForAccountAsync(account.Id, cancellationToken))
-        {
             throw new DomainException("Cannot delete an account that has transactions.");
-        }
 
         _accounts.Remove(account);
         await _unitOfWork.SaveChangesAsync(cancellationToken);

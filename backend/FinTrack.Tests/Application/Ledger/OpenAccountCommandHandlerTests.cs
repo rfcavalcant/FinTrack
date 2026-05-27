@@ -18,11 +18,11 @@ public class OpenAccountCommandHandlerTests
     private OpenAccountCommandHandler CreateHandler() => new(_accounts, _unitOfWork, _currentUser);
 
     [Fact]
-    public async Task Handle_AbreContaParaOUsuarioAtual_Persiste()
+    public async Task HandleAsync_AbreContaParaOUsuarioAtual_Persiste()
     {
         var command = new OpenAccountCommand("Corrente", AccountType.Checking, 500m, "BRL", null);
 
-        var result = await CreateHandler().Handle(command, CancellationToken.None);
+        var result = await CreateHandler().HandleAsync(command, CancellationToken.None);
 
         result.Balance.Should().Be(500m);
         result.Currency.Should().Be("BRL");

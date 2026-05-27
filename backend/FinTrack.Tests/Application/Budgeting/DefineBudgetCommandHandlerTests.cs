@@ -33,13 +33,13 @@ public class DefineBudgetCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WithValidData_CreatesBudgetAndPersists()
+    public async Task HandleAsync_WithValidData_CreatesBudgetAndPersists()
     {
         SetupExpenseCategory();
         _budgets.FindOverlappingAsync(UserId, CategoryId, Arg.Any<DateRange>(), Arg.Any<CancellationToken>())
             .Returns((Budget?)null);
 
-        var result = await _handler.Handle(
+        var result = await _handler.HandleAsync(
             new DefineBudgetCommand(CategoryId, 2026, 5, 1000m, null), CancellationToken.None);
 
         result.LimitAmount.Should().Be(1000m);
@@ -52,7 +52,7 @@ public class DefineBudgetCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WithOverlappingBudget_ThrowsDomainException()
+    public async Task HandleAsync_WithOverlappingBudget_ThrowsDomainException()
     {
         SetupExpenseCategory();
         var existing = Budget.Define(UserId, CategoryId,
@@ -61,7 +61,7 @@ public class DefineBudgetCommandHandlerTests
             .Returns(existing);
 
         await _handler.Invoking(h =>
-                h.Handle(new DefineBudgetCommand(CategoryId, 2026, 5, 1000m, null), CancellationToken.None))
+                h.HandleAsync(new DefineBudgetCommand(CategoryId, 2026, 5, 1000m, null), CancellationToken.None))
             .Should().ThrowAsync<DomainException>()
             .WithMessage("*already exists*");
 
@@ -70,37 +70,37 @@ public class DefineBudgetCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WithIncomeCategory_ThrowsDomainException()
+    public async Task HandleAsync_WithIncomeCategory_ThrowsDomainException()
     {
         var incomeCategory = Category.Create(UserId, "Salário", CategoryType.Income, string.Empty);
         _categories.GetByIdAsync(CategoryId, Arg.Any<CancellationToken>()).Returns(incomeCategory);
 
         await _handler.Invoking(h =>
-                h.Handle(new DefineBudgetCommand(CategoryId, 2026, 5, 1000m, null), CancellationToken.None))
+                h.HandleAsync(new DefineBudgetCommand(CategoryId, 2026, 5, 1000m, null), CancellationToken.None))
             .Should().ThrowAsync<DomainException>();
 
         _budgets.DidNotReceive().Add(Arg.Any<Budget>());
     }
 
     [Fact]
-    public async Task Handle_WithNonExistentCategory_ThrowsNotFoundException()
+    public async Task HandleAsync_WithNonExistentCategory_ThrowsNotFoundException()
     {
         _categories.GetByIdAsync(CategoryId, Arg.Any<CancellationToken>())
             .Returns((Category?)null);
 
         await _handler.Invoking(h =>
-                h.Handle(new DefineBudgetCommand(CategoryId, 2026, 5, 1000m, null), CancellationToken.None))
+                h.HandleAsync(new DefineBudgetCommand(CategoryId, 2026, 5, 1000m, null), CancellationToken.None))
             .Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
-    public async Task Handle_WithCustomCurrency_UsesThatCurrency()
+    public async Task HandleAsync_WithCustomCurrency_UsesThatCurrency()
     {
         SetupExpenseCategory();
         _budgets.FindOverlappingAsync(UserId, CategoryId, Arg.Any<DateRange>(), Arg.Any<CancellationToken>())
             .Returns((Budget?)null);
 
-        var result = await _handler.Handle(
+        var result = await _handler.HandleAsync(
             new DefineBudgetCommand(CategoryId, 2026, 5, 500m, "USD"), CancellationToken.None);
 
         result.Currency.Should().Be("USD");

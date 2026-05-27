@@ -1,6 +1,6 @@
 using FinTrack.API.Contracts;
 using FinTrack.Application.Transactions;
-using MediatR;
+using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,23 +11,34 @@ namespace FinTrack.API.Controllers;
 [Route("api/v1/transactions")]
 public sealed class TransactionsController : ControllerBase
 {
-    private readonly ISender _mediator;
+    private readonly RegisterTransactionCommandHandler _register;
+    private readonly GetTransactionsQueryHandler _getAll;
+    private readonly GetTransactionByIdQueryHandler _getById;
+    private readonly DeleteTransactionCommandHandler _delete;
+    private readonly IValidator<RegisterTransactionCommand> _registerValidator;
 
-    public TransactionsController(ISender mediator) => _mediator = mediator;
+    public TransactionsController(
+        RegisterTransactionCommandHandler register,
+        GetTransactionsQueryHandler getAll,
+        GetTransactionByIdQueryHandler getById,
+        DeleteTransactionCommandHandler delete,
+        IValidator<RegisterTransactionCommand> registerValidator)
+    {
+        _register = register;
+        _getAll = getAll;
+        _getById = getById;
+        _delete = delete;
+        _registerValidator = registerValidator;
+    }
 
     [HttpPost]
     public async Task<IActionResult> Register(RegisterTransactionRequest request, CancellationToken cancellationToken)
     {
-        var result = await _mediator.Send(
-            new RegisterTransactionCommand(
-                request.AccountId,
-                request.CategoryId,
-                request.Type,
-                request.Amount,
-                request.Date,
-                request.Description),
-            cancellationToken);
-
+        var command = new RegisterTransactionCommand(
+            request.AccountId, request.CategoryId, request.Type,
+            request.Amount, request.Date, request.Description);
+        await _registerValidator.ValidateAndThrowAsync(command, cancellationToken);
+        var result = await _register.HandleAsync(command, cancellationToken);
         return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
     }
 
@@ -38,16 +49,16 @@ public sealed class TransactionsController : ControllerBase
         [FromQuery] Guid? categoryId,
         [FromQuery] Guid? accountId,
         CancellationToken cancellationToken)
-        => Ok(await _mediator.Send(new GetTransactionsQuery(from, to, categoryId, accountId), cancellationToken));
+        => Ok(await _getAll.HandleAsync(new GetTransactionsQuery(from, to, categoryId, accountId), cancellationToken));
 
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetById(Guid id, CancellationToken cancellationToken)
-        => Ok(await _mediator.Send(new GetTransactionByIdQuery(id), cancellationToken));
+        => Ok(await _getById.HandleAsync(new GetTransactionByIdQuery(id), cancellationToken));
 
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
-        await _mediator.Send(new DeleteTransactionCommand(id), cancellationToken);
+        await _delete.HandleAsync(new DeleteTransactionCommand(id), cancellationToken);
         return NoContent();
     }
 }

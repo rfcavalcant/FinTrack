@@ -41,12 +41,12 @@ public class RegisterTransactionCommandHandlerTests
         => new(Guid.NewGuid(), Guid.NewGuid(), type, amount, new DateOnly(2026, 5, 25), "teste");
 
     [Fact]
-    public async Task Handle_Despesa_DebitaOSaldoEPersiste()
+    public async Task HandleAsync_Despesa_DebitaOSaldoEPersiste()
     {
         var account = ArrangeAccount(1000m);
         ArrangeCategory(CategoryType.Expense);
 
-        var result = await CreateHandler().Handle(Command(TransactionType.Expense, 300m), CancellationToken.None);
+        var result = await CreateHandler().HandleAsync(Command(TransactionType.Expense, 300m), CancellationToken.None);
 
         account.Balance.Should().Be(Money.Of(700m));
         result.Type.Should().Be("Expense");
@@ -55,56 +55,56 @@ public class RegisterTransactionCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_Receita_CreditaOSaldo()
+    public async Task HandleAsync_Receita_CreditaOSaldo()
     {
         var account = ArrangeAccount(1000m);
         ArrangeCategory(CategoryType.Income);
 
-        await CreateHandler().Handle(Command(TransactionType.Income, 250m), CancellationToken.None);
+        await CreateHandler().HandleAsync(Command(TransactionType.Income, 250m), CancellationToken.None);
 
         account.Balance.Should().Be(Money.Of(1250m));
     }
 
     [Fact]
-    public async Task Handle_ContaInexistente_LancaNotFound()
+    public async Task HandleAsync_ContaInexistente_LancaNotFound()
     {
         _accounts.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns((Account?)null);
         ArrangeCategory(CategoryType.Expense);
 
-        var act = () => CreateHandler().Handle(Command(TransactionType.Expense), CancellationToken.None);
+        var act = () => CreateHandler().HandleAsync(Command(TransactionType.Expense), CancellationToken.None);
 
         await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
-    public async Task Handle_CategoriaInexistente_LancaNotFound()
+    public async Task HandleAsync_CategoriaInexistente_LancaNotFound()
     {
         ArrangeAccount();
         _categories.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns((Category?)null);
 
-        var act = () => CreateHandler().Handle(Command(TransactionType.Expense), CancellationToken.None);
+        var act = () => CreateHandler().HandleAsync(Command(TransactionType.Expense), CancellationToken.None);
 
         await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Fact]
-    public async Task Handle_TipoDeCategoriaIncompativelComOLancamento_LancaDomainException()
+    public async Task HandleAsync_TipoDeCategoriaIncompativelComOLancamento_LancaDomainException()
     {
         ArrangeAccount();
         ArrangeCategory(CategoryType.Income); // categoria de receita...
 
-        var act = () => CreateHandler().Handle(Command(TransactionType.Expense), CancellationToken.None); // ...usada em despesa
+        var act = () => CreateHandler().HandleAsync(Command(TransactionType.Expense), CancellationToken.None); // ...usada em despesa
 
         await act.Should().ThrowAsync<DomainException>();
     }
 
     [Fact]
-    public async Task Handle_DespesaMaiorQueOSaldo_LancaDomainException()
+    public async Task HandleAsync_DespesaMaiorQueOSaldo_LancaDomainException()
     {
         ArrangeAccount(100m);
         ArrangeCategory(CategoryType.Expense);
 
-        var act = () => CreateHandler().Handle(Command(TransactionType.Expense, 500m), CancellationToken.None);
+        var act = () => CreateHandler().HandleAsync(Command(TransactionType.Expense, 500m), CancellationToken.None);
 
         await act.Should().ThrowAsync<DomainException>();
     }

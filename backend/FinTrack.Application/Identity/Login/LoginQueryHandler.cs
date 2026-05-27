@@ -1,11 +1,11 @@
+using FinTrack.Application.Common;
 using FinTrack.Application.Common.Exceptions;
 using FinTrack.Application.Common.Interfaces;
 using FinTrack.Domain.Identity;
-using MediatR;
 
 namespace FinTrack.Application.Identity.Login;
 
-public sealed class LoginQueryHandler : IRequestHandler<LoginQuery, AuthenticationResult>
+public sealed class LoginQueryHandler : IQueryHandler<LoginQuery, AuthenticationResult>
 {
     private readonly IUserRepository _users;
     private readonly IPasswordHasher _passwordHasher;
@@ -21,15 +21,15 @@ public sealed class LoginQueryHandler : IRequestHandler<LoginQuery, Authenticati
         _jwtTokenGenerator = jwtTokenGenerator;
     }
 
-    public async Task<AuthenticationResult> Handle(LoginQuery request, CancellationToken cancellationToken)
+    public async Task<AuthenticationResult> HandleAsync(
+        LoginQuery query,
+        CancellationToken cancellationToken = default)
     {
-        var email = Email.Create(request.Email);
+        var email = Email.Create(query.Email);
         var user = await _users.GetByEmailAsync(email, cancellationToken);
 
-        if (user is null || !_passwordHasher.Verify(request.Password, user.PasswordHash))
-        {
+        if (user is null || !_passwordHasher.Verify(query.Password, user.PasswordHash))
             throw new InvalidCredentialsException();
-        }
 
         var token = _jwtTokenGenerator.GenerateToken(user);
         return new AuthenticationResult(user.Id, user.Name, user.Email.Value, token);

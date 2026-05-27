@@ -1,13 +1,13 @@
+using FinTrack.Application.Common;
 using FinTrack.Application.Common.Exceptions;
 using FinTrack.Application.Common.Interfaces;
 using FinTrack.Domain.Budgeting;
-using MediatR;
 
 namespace FinTrack.Application.Budgeting;
 
-public sealed record GetBudgetByIdQuery(Guid Id) : IRequest<BudgetResponse>;
+public sealed record GetBudgetByIdQuery(Guid Id);
 
-public sealed class GetBudgetByIdQueryHandler : IRequestHandler<GetBudgetByIdQuery, BudgetResponse>
+public sealed class GetBudgetByIdQueryHandler : IQueryHandler<GetBudgetByIdQuery, BudgetResponse>
 {
     private readonly IBudgetRepository _budgets;
     private readonly ICurrentUserService _currentUser;
@@ -18,9 +18,11 @@ public sealed class GetBudgetByIdQueryHandler : IRequestHandler<GetBudgetByIdQue
         _currentUser = currentUser;
     }
 
-    public async Task<BudgetResponse> Handle(GetBudgetByIdQuery request, CancellationToken cancellationToken)
+    public async Task<BudgetResponse> HandleAsync(
+        GetBudgetByIdQuery query,
+        CancellationToken cancellationToken = default)
     {
-        var budget = await _budgets.GetByIdAsync(request.Id, cancellationToken);
+        var budget = await _budgets.GetByIdAsync(query.Id, cancellationToken);
         if (budget is null || budget.UserId != _currentUser.UserId)
             throw new NotFoundException("Budget not found.");
 

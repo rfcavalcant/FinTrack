@@ -1,8 +1,8 @@
+using FinTrack.Application.Common;
 using FinTrack.Application.Common.Interfaces;
 using FinTrack.Domain.Accounts;
 using FinTrack.Domain.Common;
 using FluentValidation;
-using MediatR;
 
 namespace FinTrack.Application.Accounts;
 
@@ -11,7 +11,7 @@ public sealed record OpenAccountCommand(
     AccountType Type,
     decimal InitialBalance,
     string? Currency,
-    decimal? CreditLimit) : IRequest<AccountResponse>;
+    decimal? CreditLimit);
 
 public sealed class OpenAccountCommandValidator : AbstractValidator<OpenAccountCommand>
 {
@@ -23,7 +23,7 @@ public sealed class OpenAccountCommandValidator : AbstractValidator<OpenAccountC
     }
 }
 
-public sealed class OpenAccountCommandHandler : IRequestHandler<OpenAccountCommand, AccountResponse>
+public sealed class OpenAccountCommandHandler : ICommandHandler<OpenAccountCommand, AccountResponse>
 {
     private readonly IAccountRepository _accounts;
     private readonly IUnitOfWork _unitOfWork;
@@ -39,13 +39,15 @@ public sealed class OpenAccountCommandHandler : IRequestHandler<OpenAccountComma
         _currentUser = currentUser;
     }
 
-    public async Task<AccountResponse> Handle(OpenAccountCommand request, CancellationToken cancellationToken)
+    public async Task<AccountResponse> HandleAsync(
+        OpenAccountCommand command,
+        CancellationToken cancellationToken = default)
     {
-        var currency = string.IsNullOrWhiteSpace(request.Currency) ? Money.DefaultCurrency : request.Currency!;
-        var initialBalance = Money.Of(request.InitialBalance, currency);
-        var creditLimit = request.CreditLimit.HasValue ? Money.Of(request.CreditLimit.Value, currency) : null;
+        var currency = string.IsNullOrWhiteSpace(command.Currency) ? Money.DefaultCurrency : command.Currency!;
+        var initialBalance = Money.Of(command.InitialBalance, currency);
+        var creditLimit = command.CreditLimit.HasValue ? Money.Of(command.CreditLimit.Value, currency) : null;
 
-        var account = Account.Open(_currentUser.UserId, request.Name, request.Type, initialBalance, creditLimit);
+        var account = Account.Open(_currentUser.UserId, command.Name, command.Type, initialBalance, creditLimit);
 
         _accounts.Add(account);
         await _unitOfWork.SaveChangesAsync(cancellationToken);

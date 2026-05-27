@@ -1,12 +1,12 @@
+using FinTrack.Application.Common;
 using FinTrack.Application.Common.Exceptions;
 using FinTrack.Application.Common.Interfaces;
 using FinTrack.Domain.Categories;
 using FluentValidation;
-using MediatR;
 
 namespace FinTrack.Application.Categories;
 
-public sealed record UpdateCategoryCommand(Guid Id, string Name, string? Color) : IRequest<CategoryResponse>;
+public sealed record UpdateCategoryCommand(Guid Id, string Name, string? Color);
 
 public sealed class UpdateCategoryCommandValidator : AbstractValidator<UpdateCategoryCommand>
 {
@@ -17,7 +17,7 @@ public sealed class UpdateCategoryCommandValidator : AbstractValidator<UpdateCat
     }
 }
 
-public sealed class UpdateCategoryCommandHandler : IRequestHandler<UpdateCategoryCommand, CategoryResponse>
+public sealed class UpdateCategoryCommandHandler : ICommandHandler<UpdateCategoryCommand, CategoryResponse>
 {
     private readonly ICategoryRepository _categories;
     private readonly IUnitOfWork _unitOfWork;
@@ -33,16 +33,16 @@ public sealed class UpdateCategoryCommandHandler : IRequestHandler<UpdateCategor
         _currentUser = currentUser;
     }
 
-    public async Task<CategoryResponse> Handle(UpdateCategoryCommand request, CancellationToken cancellationToken)
+    public async Task<CategoryResponse> HandleAsync(
+        UpdateCategoryCommand command,
+        CancellationToken cancellationToken = default)
     {
-        var category = await _categories.GetByIdAsync(request.Id, cancellationToken);
+        var category = await _categories.GetByIdAsync(command.Id, cancellationToken);
         if (category is null || category.UserId != _currentUser.UserId)
-        {
             throw new NotFoundException("Category not found.");
-        }
 
-        category.Rename(request.Name);
-        category.ChangeColor(request.Color ?? string.Empty);
+        category.Rename(command.Name);
+        category.ChangeColor(command.Color ?? string.Empty);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return CategoryResponse.From(category);

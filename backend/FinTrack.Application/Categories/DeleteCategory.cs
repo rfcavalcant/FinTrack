@@ -1,15 +1,15 @@
+using FinTrack.Application.Common;
 using FinTrack.Application.Common.Exceptions;
 using FinTrack.Application.Common.Interfaces;
 using FinTrack.Domain.Categories;
 using FinTrack.Domain.Common;
 using FinTrack.Domain.Transactions;
-using MediatR;
 
 namespace FinTrack.Application.Categories;
 
-public sealed record DeleteCategoryCommand(Guid Id) : IRequest;
+public sealed record DeleteCategoryCommand(Guid Id);
 
-public sealed class DeleteCategoryCommandHandler : IRequestHandler<DeleteCategoryCommand>
+public sealed class DeleteCategoryCommandHandler : ICommandHandler<DeleteCategoryCommand>
 {
     private readonly ICategoryRepository _categories;
     private readonly ITransactionRepository _transactions;
@@ -28,18 +28,16 @@ public sealed class DeleteCategoryCommandHandler : IRequestHandler<DeleteCategor
         _currentUser = currentUser;
     }
 
-    public async Task Handle(DeleteCategoryCommand request, CancellationToken cancellationToken)
+    public async Task HandleAsync(
+        DeleteCategoryCommand command,
+        CancellationToken cancellationToken = default)
     {
-        var category = await _categories.GetByIdAsync(request.Id, cancellationToken);
+        var category = await _categories.GetByIdAsync(command.Id, cancellationToken);
         if (category is null || category.UserId != _currentUser.UserId)
-        {
             throw new NotFoundException("Category not found.");
-        }
 
         if (await _transactions.ExistsForCategoryAsync(category.Id, cancellationToken))
-        {
             throw new DomainException("Cannot delete a category that has transactions.");
-        }
 
         _categories.Remove(category);
         await _unitOfWork.SaveChangesAsync(cancellationToken);

@@ -1,12 +1,11 @@
+using FinTrack.Application.Common;
 using FinTrack.Application.Common.Interfaces;
 using FinTrack.Domain.Categories;
 using FluentValidation;
-using MediatR;
 
 namespace FinTrack.Application.Categories;
 
-public sealed record CreateCategoryCommand(string Name, CategoryType Type, string? Color)
-    : IRequest<CategoryResponse>;
+public sealed record CreateCategoryCommand(string Name, CategoryType Type, string? Color);
 
 public sealed class CreateCategoryCommandValidator : AbstractValidator<CreateCategoryCommand>
 {
@@ -18,7 +17,7 @@ public sealed class CreateCategoryCommandValidator : AbstractValidator<CreateCat
     }
 }
 
-public sealed class CreateCategoryCommandHandler : IRequestHandler<CreateCategoryCommand, CategoryResponse>
+public sealed class CreateCategoryCommandHandler : ICommandHandler<CreateCategoryCommand, CategoryResponse>
 {
     private readonly ICategoryRepository _categories;
     private readonly IUnitOfWork _unitOfWork;
@@ -34,9 +33,11 @@ public sealed class CreateCategoryCommandHandler : IRequestHandler<CreateCategor
         _currentUser = currentUser;
     }
 
-    public async Task<CategoryResponse> Handle(CreateCategoryCommand request, CancellationToken cancellationToken)
+    public async Task<CategoryResponse> HandleAsync(
+        CreateCategoryCommand command,
+        CancellationToken cancellationToken = default)
     {
-        var category = Category.Create(_currentUser.UserId, request.Name, request.Type, request.Color ?? string.Empty);
+        var category = Category.Create(_currentUser.UserId, command.Name, command.Type, command.Color ?? string.Empty);
 
         _categories.Add(category);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
