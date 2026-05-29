@@ -4,6 +4,14 @@ obj/
 riderModule.iml
 /_ReSharper.Caches/
 *.DotSettings.user
+**/*.log
+**/*.pid
+**/*.err
+**/*.db
+**/*.db-shm
+**/*.db-wal
+backend/project-context/
+frontend/fintrack-web/accounts-crud-*.png
 
 # Configuração local / segredos (connection strings, etc.)
 appsettings.Development.json
