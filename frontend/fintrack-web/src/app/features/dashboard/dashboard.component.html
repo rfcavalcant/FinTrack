@@ -8,12 +8,183 @@
   </header>
 
   <main class="dashboard-main">
-    <h1>Olá, {{ auth.currentUser()?.name }} 👋</h1>
-    <p class="subtitle">Seu dashboard financeiro será construído aqui nas próximas fases.</p>
+    <section class="hero">
+      <div>
+        <p class="eyebrow">Fase 9.2</p>
+        <h1>Contas e saldos em um so lugar.</h1>
+        <p class="subtitle">
+          Cadastre contas, organize os tipos que voce usa no dia a dia e mantenha o saldo inicial alinhado com o backend.
+        </p>
+      </div>
 
-    <div class="placeholder-card">
-      <span class="placeholder-icon">📊</span>
-      <p>Gráficos e resumos em breve (fase 10).</p>
-    </div>
+      <div class="hero-actions">
+        <div class="metric-card">
+          <span class="metric-label">Contas cadastradas</span>
+          <strong>{{ accounts().length }}</strong>
+        </div>
+
+        <div class="metric-card metric-card--accent">
+          <span class="metric-label">Saldo consolidado</span>
+          <strong>{{ formatMoney(totalBalance(), 'BRL') }}</strong>
+        </div>
+
+        <div class="metric-card">
+          <span class="metric-label">Cartoes de credito</span>
+          <strong>{{ creditAccounts() }}</strong>
+        </div>
+      </div>
+    </section>
+
+    @if (successMessage()) {
+      <p class="banner banner--success">{{ successMessage() }}</p>
+    }
+
+    @if (pageError()) {
+      <p class="banner banner--error">{{ pageError() }}</p>
+    }
+
+    <section class="dashboard-grid">
+      <article class="panel panel--form">
+        <div class="panel-heading">
+          <div>
+            <p class="panel-kicker">Nova conta</p>
+            <h2>Criar conta</h2>
+          </div>
+          <span class="panel-note">Persistencia imediata no backend</span>
+        </div>
+
+        <form [formGroup]="createForm" (ngSubmit)="createAccount()" class="account-form">
+          <label class="field">
+            <span>Nome</span>
+            <input type="text" formControlName="name" placeholder="Ex.: Nubank, Carteira, Itau" />
+            @if (createForm.controls.name.touched && createForm.controls.name.invalid) {
+              <small>Informe um nome com ate 100 caracteres.</small>
+            }
+          </label>
+
+          <label class="field">
+            <span>Tipo</span>
+            <select formControlName="type">
+              @for (option of accountTypeOptions; track option.value) {
+                <option [value]="option.value">{{ option.label }}</option>
+              }
+            </select>
+            <small>{{ currentTypeHint() }}</small>
+          </label>
+
+          <div class="field-row">
+            <label class="field">
+              <span>Saldo inicial</span>
+              <input type="number" formControlName="initialBalance" step="0.01" />
+            </label>
+
+            <label class="field">
+              <span>Moeda</span>
+              <input type="text" formControlName="currency" maxlength="3" />
+            </label>
+          </div>
+
+          @if (isCreditCardSelected()) {
+            <label class="field">
+              <span>Limite de credito</span>
+              <input type="number" formControlName="creditLimit" step="0.01" placeholder="Ex.: 5000" />
+              <small>Opcional, mas util para acompanhar o teto do cartao.</small>
+            </label>
+          }
+
+          @if (formError()) {
+            <p class="inline-feedback inline-feedback--error">{{ formError() }}</p>
+          }
+
+          <button class="btn btn-primary" type="submit" [disabled]="creating()">
+            {{ creating() ? 'Salvando...' : 'Criar conta' }}
+          </button>
+        </form>
+      </article>
+
+      <section class="panel panel--list">
+        <div class="panel-heading">
+          <div>
+            <p class="panel-kicker">Leitura + manutencao</p>
+            <h2>Suas contas</h2>
+          </div>
+          <button class="btn btn-secondary" type="button" (click)="loadAccounts()" [disabled]="loading()">
+            {{ loading() ? 'Atualizando...' : 'Atualizar lista' }}
+          </button>
+        </div>
+
+        @if (loading()) {
+          <div class="empty-state">
+            <p>Carregando contas...</p>
+          </div>
+        } @else if (!accounts().length) {
+          <div class="empty-state">
+            <p>Nenhuma conta cadastrada ainda.</p>
+            <span>Crie a primeira conta ao lado para comecar.</span>
+          </div>
+        } @else {
+          <div class="accounts-list">
+            @for (account of accounts(); track account.id) {
+              <article class="account-card">
+                <div class="account-card__top">
+                  <div>
+                    <span class="account-type">{{ typeLabel(account.type) }}</span>
+                    <h3>{{ account.name }}</h3>
+                  </div>
+
+                  <button
+                    class="btn-icon"
+                    type="button"
+                    (click)="deleteAccount(account)"
+                    [disabled]="deletingId() === account.id"
+                  >
+                    {{ deletingId() === account.id ? '...' : 'Excluir' }}
+                  </button>
+                </div>
+
+                <div class="account-card__metrics">
+                  <div>
+                    <span>Saldo</span>
+                    <strong>{{ formatMoney(account.balance, account.currency) }}</strong>
+                  </div>
+
+                  <div>
+                    <span>Limite</span>
+                    <strong>
+                      {{ account.creditLimit === null ? 'N/A' : formatMoney(account.creditLimit, account.currency) }}
+                    </strong>
+                  </div>
+                </div>
+
+                @if (editingId() === account.id) {
+                  <form class="rename-form" [formGroup]="renameForm" (ngSubmit)="saveRename(account)">
+                    <label class="field">
+                      <span>Novo nome</span>
+                      <input type="text" formControlName="name" />
+                    </label>
+
+                    @if (renameError()) {
+                      <p class="inline-feedback inline-feedback--error">{{ renameError() }}</p>
+                    }
+
+                    <div class="rename-actions">
+                      <button class="btn btn-primary" type="submit" [disabled]="savingRename()">
+                        {{ savingRename() ? 'Salvando...' : 'Salvar nome' }}
+                      </button>
+                      <button class="btn btn-ghost" type="button" (click)="cancelRename()">Cancelar</button>
+                    </div>
+                  </form>
+                } @else {
+                  <div class="account-card__footer">
+                    <span>ID {{ account.id }}</span>
+                    <button class="btn btn-ghost" type="button" (click)="startRename(account)">Renomear</button>
+                  </div>
+                }
+              </article>
+            }
+          </div>
+        }
+      </section>
+    </section>
   </main>
 </div>

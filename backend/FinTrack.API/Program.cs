@@ -22,7 +22,7 @@ builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
-        // Mantém o claim "sub" como está (sem remapear para nameidentifier).
+        // Keep the "sub" claim as-is instead of remapping it.
         options.MapInboundClaims = false;
         options.TokenValidationParameters = new TokenValidationParameters
         {
@@ -41,9 +41,9 @@ if (builder.Environment.IsDevelopment())
 {
     builder.Services.AddCors(options =>
         options.AddPolicy("DevCors", policy =>
-            policy.WithOrigins("http://localhost:4200")
-                  .AllowAnyHeader()
-                  .AllowAnyMethod()));
+            policy.WithOrigins("http://localhost:4200", "http://127.0.0.1:4200")
+                .AllowAnyHeader()
+                .AllowAnyMethod()));
 }
 
 builder.Services
@@ -57,13 +57,19 @@ var app = builder.Build();
 
 app.UseExceptionHandler();
 
-// Aplica migrations pendentes no startup (idempotente). Funciona na imagem runtime
-// sem EF tools. Desligue com RunMigrationsAtStartup=false (ex.: deploy com múltiplas réplicas).
 if (app.Configuration.GetValue("RunMigrationsAtStartup", true))
 {
     using var scope = app.Services.CreateScope();
     var dbContext = scope.ServiceProvider.GetRequiredService<FinTrackDbContext>();
-    dbContext.Database.Migrate();
+
+    if (dbContext.Database.IsSqlite())
+    {
+        dbContext.Database.EnsureCreated();
+    }
+    else
+    {
+        dbContext.Database.Migrate();
+    }
 }
 
 if (app.Environment.IsDevelopment())
@@ -71,8 +77,6 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-// Em container a API roda em HTTP (TLS fica a cargo do proxy/ingress); o redirect
-// só faz sentido fora do container.
 if (Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") != "true")
 {
     app.UseHttpsRedirection();
